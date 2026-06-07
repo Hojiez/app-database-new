@@ -419,7 +419,8 @@ app.post('/api/customer/order', authenticateToken, authorizeRole('customer'), as
         // Pass 1: Validate stock and calculate total BEFORE inserting anything
         for (let index = 0; index < items.length; index++) {
             const item = items[index];
-            const cekStok = await pool.query("SELECT harga, stok FROM barang WHERE barang_id = $1", [item.id_barang]);
+            // ✅ PATCH: Added FOR UPDATE for row-level locking
+            const cekStok = await pool.query("SELECT harga, stok FROM barang WHERE barang_id = $1 FOR UPDATE", [item.id_barang]);
             if (cekStok.rows.length === 0 || cekStok.rows[0].stok < item.jumlah) {
                 throw new Error(`Stok tidak cukup untuk barang ${item.id_barang}`);
             }
@@ -430,9 +431,11 @@ app.post('/api/customer/order', authenticateToken, authorizeRole('customer'), as
         }
 
         // Pass 2: Insert Parent Record (transaksi) FIRST to satisfy detail_transaksi foreign key
+        // ✅ PATCH: Dynamic status based on payment method
+        const initialStatus = metode_pembayaran === 'TUNAI' ? 'Menunggu Pembayaran Kasir' : 'Pending';
         await pool.query(
-            "INSERT INTO transaksi (transaksi_id, user_id, pelanggan_id, tanggal_transaksi, total_harga, metode_pembayaran, status_transaksi) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5, 'Pending')",
-            [transaksiId, defaultUserId, pelangganId, totalHargaAll, metode_pembayaran]
+            "INSERT INTO transaksi (transaksi_id, user_id, pelanggan_id, tanggal_transaksi, total_harga, metode_pembayaran, status_transaksi) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5, $6)",
+            [transaksiId, defaultUserId, pelangganId, totalHargaAll, metode_pembayaran, initialStatus]
         );
 
         // Pass 3: Insert Child Records (detail_transaksi) and Update Stock
@@ -660,10 +663,12 @@ app.post('/api/midtrans/webhook', async (req, res) => {
             if (fraudStatus == 'challenge') {
                 // TODO set transaction status on your database to 'challenge'
             } else if (fraudStatus == 'accept') {
-                await pool.query("UPDATE transaksi SET status_transaksi = 'Paid' WHERE transaksi_id = $1", [realOrderId]);
+                // ✅ PATCH: Changed 'Paid' to 'Dikemas' to match SDD
+                await pool.query("UPDATE transaksi SET status_transaksi = 'Dikemas' WHERE transaksi_id = $1", [realOrderId]);
             }
         } else if (transactionStatus == 'settlement') {
-            await pool.query("UPDATE transaksi SET status_transaksi = 'Paid' WHERE transaksi_id = $1", [realOrderId]);
+            // ✅ PATCH: Changed 'Paid' to 'Dikemas' to match SDD
+            await pool.query("UPDATE transaksi SET status_transaksi = 'Dikemas' WHERE transaksi_id = $1", [realOrderId]);
         } else if (transactionStatus == 'cancel' || transactionStatus == 'deny' || transactionStatus == 'expire') {
             await pool.query("UPDATE transaksi SET status_transaksi = 'Cancelled' WHERE transaksi_id = $1", [realOrderId]);
         } else if (transactionStatus == 'pending') {
