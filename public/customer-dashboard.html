@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Pelanggan - Toko Perabotan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="YOUR_CLIENT_KEY_HERE"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-800 flex flex-col border-r border-gray-700 flex-shrink-0">
+        <div class="p-6 border-b border-gray-700">
+            <div class="text-2xl font-bold text-yellow-500"><a href="/index.html">Toko Perabotan</a></div>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <a href="/index.html" class="block w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:text-yellow-500 hover:bg-gray-700 font-bold transition">
+                <i class="fa-solid fa-home mr-2"></i> Beranda
+            </a>
+            <button onclick="switchMainTab('orders')" id="tab-orders" class="w-full text-left px-4 py-3 rounded-lg text-yellow-500 bg-gray-700 font-bold transition">
+                <i class="fa-solid fa-list-ul mr-2"></i> Daftar Pesanan
+            </button>
+            <button onclick="switchMainTab('profile')" id="tab-profile" class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:text-yellow-500 hover:bg-gray-700 font-bold transition">
+                <i class="fa-solid fa-user mr-2"></i> Pengaturan Akun
+            </button>
+        </nav>
+        <div class="p-4 border-t border-gray-700">
+            <button onclick="logoutCustomer()" class="w-full bg-gray-700 py-2 rounded-lg hover:bg-red-500 hover:text-white transition font-semibold">
+                <i class="fa-solid fa-sign-out-alt mr-2"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-8 relative">
+        <div class="flex justify-between items-center mb-8 max-w-5xl">
+            <h1 class="text-3xl font-bold text-gray-100">Dashboard Saya</h1>
+            <div id="welcomeName" class="text-gray-300 bg-gray-800 px-4 py-2 rounded-full border border-gray-700 font-medium"></div>
+        </div>
+
+        <div class="max-w-5xl">
+            <!-- Order Status Widget -->
+            <div id="orderStatusWidget" class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 mb-8">
+            <!-- Top Header -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-100">Pesanan Saya</h2>
+                <a href="#" onclick="switchTab('history'); return false;" class="text-sm text-gray-400 hover:text-yellow-500 transition cursor-pointer">Lihat Riwayat Pesanan &gt;</a>
+            </div>
+            
+            <!-- Bottom Grid -->
+            <div class="grid grid-cols-4 gap-4 text-center">
+                <!-- Item 1 -->
+                <div id="filter-Pending" onclick="setFilter('Pending')" class="flex flex-col items-center justify-center cursor-pointer hover:text-yellow-500 transition group text-yellow-500">
+                    <div class="relative text-2xl mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span id="badge-pending" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-800"></span>
+                    </div>
+                    <span class="text-xs font-semibold">Belum Bayar</span>
+                </div>
+                <!-- Item 2 -->
+                <div id="filter-Dikemas" onclick="setFilter('Dikemas')" class="flex flex-col items-center justify-center cursor-pointer hover:text-yellow-500 transition group text-gray-300">
+                    <div class="relative text-2xl mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-box"></i>
+                        <span id="badge-dikemas" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-800"></span>
+                    </div>
+                    <span class="text-xs font-semibold">Dikemas</span>
+                </div>
+                <!-- Item 3 -->
+                <div id="filter-Dikirim" onclick="setFilter('Dikirim')" class="flex flex-col items-center justify-center cursor-pointer hover:text-yellow-500 transition group text-gray-300">
+                    <div class="relative text-2xl mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-truck"></i>
+                        <span id="badge-dikirim" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-800"></span>
+                    </div>
+                    <span class="text-xs font-semibold">Dikirim</span>
+                </div>
+                <!-- Item 4 -->
+                <div id="filter-Beri Penilaian" onclick="setFilter('Beri Penilaian')" class="flex flex-col items-center justify-center cursor-pointer hover:text-yellow-500 transition group text-gray-300">
+                    <div class="relative text-2xl mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-star"></i>
+                        <span id="badge-review" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-800"></span>
+                    </div>
+                    <span class="text-xs font-semibold">Beri Penilaian</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+            <!-- Filtered Orders -->
+            <div id="content-ongoing">
+                <div id="ongoingOrdersList" class="space-y-4">
+                    <p class="text-gray-500 italic">Memuat...</p>
+                </div>
+            </div>
+
+            <!-- Profile Container -->
+            <div id="profileContainer" class="hidden">
+                <form id="profileForm" onsubmit="updateProfile(event)" class="space-y-4 max-w-lg">
+                    <div>
+                        <label class="block text-gray-400 text-sm font-bold mb-2">Nama Lengkap</label>
+                        <input type="text" id="profileNama" class="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2 focus:outline-none focus:border-yellow-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-sm font-bold mb-2">Email</label>
+                        <input type="email" id="profileEmail" class="w-full bg-gray-900 text-gray-500 border border-gray-700 rounded px-3 py-2 cursor-not-allowed" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-sm font-bold mb-2">Nomor Telepon</label>
+                        <input type="text" id="profileTelepon" class="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2 focus:outline-none focus:border-yellow-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-sm font-bold mb-2">Alamat Lengkap</label>
+                        <textarea id="profileAlamat" rows="3" class="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2 focus:outline-none focus:border-yellow-500" required></textarea>
+                    </div>
+                    <button type="submit" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded shadow transition">Simpan Perubahan</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Order Details Modal -->
+    <div id="orderDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl shadow-xl relative border border-gray-700 max-h-[90vh] overflow-y-auto">
+            <button onclick="closeOrderDetails()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold mb-4 text-gray-100" id="modalOrderId">Detail Pesanan</h2>
+            <div id="modalOrderInfo" class="text-gray-300 space-y-2 mb-6">
+                <!-- details -->
+            </div>
+            <h3 class="text-xl font-semibold mb-3 text-gray-200">Barang</h3>
+            <div id="modalOrderItems" class="space-y-3 mb-6">
+                <!-- items -->
+            </div>
+            <div class="flex justify-between items-center border-t border-gray-700 pt-4">
+                <p class="text-xl font-bold text-yellow-500" id="modalOrderTotal"></p>
+                <div id="modalActionButtons">
+                    <!-- buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg shadow-xl relative border border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="closeReviewModal()" class="text-gray-400 hover:text-white text-xl"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-xl font-bold text-gray-100">Nilai Produk</h2>
+                <button onclick="submitReview()" class="text-yellow-500 font-bold hover:text-yellow-400">KIRIM</button>
+            </div>
+            
+            <div class="flex items-center space-x-4 mb-6 bg-gray-700 p-3 rounded-lg">
+                <i class="fa-solid fa-box text-3xl text-gray-400"></i>
+                <p class="font-bold text-gray-200" id="reviewProductName">Nama Barang</p>
+            </div>
+
+            <div class="mb-6 border-b border-gray-700 pb-6">
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">Kualitas Produk</h3>
+                <div class="flex space-x-2 text-2xl text-gray-500 cursor-pointer" id="starRatingContainer">
+                    <i class="fa-solid fa-star hover:text-yellow-500" onclick="setRating(1)"></i>
+                    <i class="fa-solid fa-star hover:text-yellow-500" onclick="setRating(2)"></i>
+                    <i class="fa-solid fa-star hover:text-yellow-500" onclick="setRating(3)"></i>
+                    <i class="fa-solid fa-star hover:text-yellow-500" onclick="setRating(4)"></i>
+                    <i class="fa-solid fa-star hover:text-yellow-500" onclick="setRating(5)"></i>
+                </div>
+            </div>
+
+            <div class="flex space-x-4 mb-6">
+                <button class="flex-1 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-camera"></i> <span>Tambah Foto</span>
+                </button>
+                <button class="flex-1 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-video"></i> <span>Tambah Video</span>
+                </button>
+            </div>
+
+            <textarea id="reviewText" rows="4" class="w-full bg-gray-900 text-gray-200 border border-gray-600 rounded-lg p-3 focus:outline-none focus:border-yellow-500" placeholder="Bagikan penilaianmu dan bantu Pengguna lain..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('customer_token');
+        const nama = localStorage.getItem('customer_nama');
+
+        if (!token) {
+            window.location.href = '/customer-login.html';
+        }
+
+        document.getElementById('welcomeName').innerHTML = `Halo, <span class="text-yellow-500 font-bold">${nama}</span>`;
+
+        function logoutCustomer() {
+            localStorage.removeItem('customer_token');
+            localStorage.removeItem('customer_nama');
+            window.location.href = '/index.html';
+        }
+
+        let allOrders = [];
+        let currentFilter = 'Pending';
+
+        function setFilter(status) {
+            currentFilter = status;
+            
+            // Update active state in UI
+            const filters = ['Pending', 'Dikemas', 'Dikirim', 'Beri Penilaian'];
+            filters.forEach(f => {
+                const el = document.getElementById(`filter-${f}`);
+                if (f === status) {
+                    el.classList.remove('text-gray-300');
+                    el.classList.add('text-yellow-500');
+                } else {
+                    el.classList.remove('text-yellow-500');
+                    el.classList.add('text-gray-300');
+                }
+            });
+
+            renderFilteredOrders();
+        }
+
+        function renderFilteredOrders() {
+            const list = document.getElementById('ongoingOrdersList');
+            list.innerHTML = '';
+
+            const filteredOrders = allOrders.filter(order => order.status_transaksi === currentFilter);
+
+            if (filteredOrders.length === 0) {
+                const filterLabels = {
+                    'Pending': 'Belum Bayar',
+                    'Dikemas': 'Dikemas',
+                    'Dikirim': 'Dikirim',
+                    'Beri Penilaian': 'Beri Penilaian'
+                };
+                list.innerHTML = `<div class="text-center py-10 text-gray-400">Belum ada pesanan di kategori ${filterLabels[currentFilter]}.</div>`;
+                return;
+            }
+
+            filteredOrders.forEach(order => {
+                const status = order.status_transaksi;
+                const date = new Date(order.tanggal_transaksi).toLocaleString('id-ID');
+                
+                const card = `
+                    <div onclick="openOrderDetails('${order.transaksi_id}')" class="cursor-pointer border border-gray-700 bg-gray-900 rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center hover:border-yellow-500 transition duration-300">
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-100">${order.transaksi_id}</h3>
+                            <p class="text-sm text-gray-400">${date}</p>
+                            <p class="font-bold text-yellow-500 mt-2">Rp ${parseInt(order.total_harga).toLocaleString()}</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 text-right">
+                            <span class="px-3 py-1 bg-yellow-500 text-gray-900 rounded-full text-sm font-bold shadow">${status}</span>
+                            ${status !== 'Sukses' && status !== 'Paid' && status !== 'Cancelled' ? `<div class="mt-2 text-xs text-yellow-500 opacity-80">Klik untuk melihat detail & bayar</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                list.innerHTML += card;
+            });
+        }
+
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/customer/orders', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                allOrders = data;
+
+                let countPending = 0;
+                let countDikemas = 0;
+                let countDikirim = 0;
+                let countReview = 0;
+
+                allOrders.forEach(order => {
+                    const status = order.status_transaksi;
+                    if (status === 'Pending') countPending++;
+                    if (status === 'Dikemas') countDikemas++;
+                    if (status === 'Dikirim') countDikirim++;
+                    if (status === 'Beri Penilaian') countReview++;
+                });
+
+                function updateBadge(id, count) {
+                    const badge = document.getElementById(id);
+                    if (count > 0) {
+                        badge.innerText = count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+                updateBadge('badge-pending', countPending);
+                updateBadge('badge-dikemas', countDikemas);
+                updateBadge('badge-dikirim', countDikirim);
+                updateBadge('badge-review', countReview);
+
+                renderFilteredOrders();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function openOrderDetails(id) {
+            try {
+                const res = await fetch(`/api/customer/orders/${id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const order = await res.json();
+                
+                document.getElementById('modalOrderId').innerText = `Pesanan: ${order.transaksi_id}`;
+                const date = new Date(order.tanggal_transaksi).toLocaleString('id-ID');
+                document.getElementById('modalOrderInfo').innerHTML = `
+                    <p><span class="font-semibold text-gray-400">Tanggal:</span> ${date}</p>
+                    <p><span class="font-semibold text-gray-400">Status:</span> ${order.status_transaksi}</p>
+                    <p><span class="font-semibold text-gray-400">Metode:</span> ${order.metode_pembayaran || '-'}</p>
+                `;
+                
+                let itemsHtml = '';
+                order.items.forEach(item => {
+                    let reviewBtn = '';
+                    if (order.status_transaksi === 'Beri Penilaian') {
+                        reviewBtn = `<button onclick="openReviewModal('${order.transaksi_id}', '${item.barang_id}', '${item.nama_barang.replace(/'/g, "\\'")}')" class="mt-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-3 py-1 rounded text-xs font-bold shadow transition">Beri Penilaian</button>`;
+                    }
+                    itemsHtml += `
+                        <div class="flex flex-col bg-gray-700 p-3 rounded text-sm">
+                            <div class="flex justify-between">
+                                <div>
+                                    <p class="font-bold text-gray-200">${item.nama_barang}</p>
+                                    <p class="text-gray-400">${item.jumlah_barang} x Rp ${parseInt(item.harga_satuan).toLocaleString()}</p>
+                                </div>
+                                <div class="font-bold text-gray-200 mt-auto">Rp ${parseInt(item.subtotal).toLocaleString()}</div>
+                            </div>
+                            ${reviewBtn ? `<div class="text-right">${reviewBtn}</div>` : ''}
+                        </div>
+                    `;
+                });
+                document.getElementById('modalOrderItems').innerHTML = itemsHtml;
+                document.getElementById('modalOrderTotal').innerText = `Total: Rp ${parseInt(order.total_harga).toLocaleString()}`;
+                
+                let actionBtns = '';
+                if (order.status_transaksi === 'Pending' && order.metode_pembayaran === 'QRIS') {
+                    actionBtns += `<button onclick="retryPayment('${order.transaksi_id}')" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-4 py-2 rounded font-bold shadow">Bayar Sekarang (QRIS)</button>`;
+                }
+                if (order.status_transaksi === 'Dikemas') {
+                    actionBtns += `<button id="btn-sim-kirim" onclick="simulateTransition('${order.transaksi_id}', 'Dikirim')" class="bg-gray-600 hover:bg-gray-500 text-white border border-gray-500 px-4 py-2 rounded font-bold shadow transition">Simulasi: Kirim Pesanan</button>`;
+                }
+                if (order.status_transaksi === 'Dikirim') {
+                    actionBtns += `<button id="btn-sim-selesai" onclick="simulateTransition('${order.transaksi_id}', 'Beri Penilaian')" class="bg-gray-600 hover:bg-gray-500 text-white border border-gray-500 px-4 py-2 rounded font-bold shadow transition">Simulasi: Pesanan Diterima</button>`;
+                }
+                document.getElementById('modalActionButtons').innerHTML = actionBtns;
+                
+                document.getElementById('orderDetailsModal').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                alert('Gagal memuat detail pesanan.');
+            }
+        }
+        
+        function closeOrderDetails() {
+            document.getElementById('orderDetailsModal').classList.add('hidden');
+        }
+        
+        async function retryPayment(id) {
+            try {
+                const res = await fetch(`/api/customer/orders/${id}/pay`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.token) {
+                    window.snap.pay(data.token, {
+                        onSuccess: function(result){
+                            fetch(`/api/customer/orders/${id}/transition`, {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ new_status: 'Dikemas' })
+                            })
+                            .then(response => {
+                                if (!response.ok) throw new Error('Backend failed to update status');
+                                return response.json();
+                            })
+                            .then(() => {
+                                alert("Pembayaran Berhasil! Pesanan sedang dikemas.");
+                                window.location.reload();
+                            })
+                            .catch(err => {
+                                alert("Error updating status: " + err.message);
+                                console.error(err);
+                            });
+                        },
+                        onPending: function(result){
+                            alert('Waiting for your payment!');
+                            window.location.reload();
+                        },
+                        onError: function(result){
+                            alert('Payment failed!');
+                        },
+                        onClose: function(){
+                            // User closed the popup, do not reload, just stay on page so they can retry again.
+                        }
+                    });
+                } else {
+                    alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Payment Processing Error: ' + (err.message || JSON.stringify(err)));
+            }
+        }
+
+        function simulateTransition(id, newStatus) {
+            fetch(`/api/customer/orders/${id}/transition`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ new_status: newStatus })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert("Status berhasil diperbarui!");
+                    window.location.reload();
+                } else {
+                    alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Terjadi kesalahan saat memproses simulasi.');
+            });
+        }
+        let currentReviewTransaksiId = null;
+        let currentReviewBarangId = null;
+        let currentReviewRating = 0;
+
+        function openReviewModal(transaksiId, barangId, namaBarang) {
+            currentReviewTransaksiId = transaksiId;
+            currentReviewBarangId = barangId;
+            currentReviewRating = 0;
+            
+            document.getElementById('reviewProductName').innerText = namaBarang;
+            document.getElementById('reviewText').value = '';
+            setRating(0); // reset stars
+            
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+        }
+
+        function setRating(rating) {
+            currentReviewRating = rating;
+            const container = document.getElementById('starRatingContainer');
+            const stars = container.querySelectorAll('i');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('text-gray-500');
+                    star.classList.add('text-yellow-500');
+                } else {
+                    star.classList.remove('text-yellow-500');
+                    star.classList.add('text-gray-500');
+                }
+            });
+        }
+
+        function submitReview() {
+            if (currentReviewRating === 0) {
+                alert('Silakan pilih rating bintang terlebih dahulu.');
+                return;
+            }
+
+            const reviewText = document.getElementById('reviewText').value;
+
+            fetch('/api/customer/reviews', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    transaksi_id: currentReviewTransaksiId,
+                    barang_id: currentReviewBarangId,
+                    rating: currentReviewRating,
+                    review_text: reviewText
+                })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to submit review');
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Terima kasih atas penilaian Anda!');
+                    closeReviewModal();
+                    closeOrderDetails();
+                    
+                    // Immediately remove order from allOrders locally
+                    allOrders = allOrders.filter(o => o.transaksi_id !== currentReviewTransaksiId);
+                    
+                    // Update badge logic manually
+                    let badgeReview = document.getElementById('badge-review');
+                    let currentCount = parseInt(badgeReview.innerText) || 1;
+                    currentCount--;
+                    if (currentCount > 0) {
+                        badgeReview.innerText = currentCount;
+                        badgeReview.classList.remove('hidden');
+                    } else {
+                        badgeReview.classList.add('hidden');
+                    }
+                    
+                    renderFilteredOrders(); // Re-render local list
+                } else {
+                    alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Terjadi kesalahan saat mengirim penilaian.');
+            });
+        }
+
+        function switchMainTab(tab) {
+            const btnOrders = document.getElementById('tab-orders');
+            const btnProfile = document.getElementById('tab-profile');
+            const statusWidget = document.getElementById('orderStatusWidget');
+
+            if (tab === 'orders') {
+                btnOrders.className = "w-full text-left px-4 py-3 rounded-lg text-yellow-500 bg-gray-700 font-bold transition";
+                btnOrders.innerHTML = '<i class="fa-solid fa-list-ul mr-2"></i> Daftar Pesanan';
+
+                btnProfile.className = "w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:text-yellow-500 hover:bg-gray-700 font-bold transition";
+                btnProfile.innerHTML = '<i class="fa-solid fa-user mr-2"></i> Pengaturan Akun';
+
+                document.getElementById('content-ongoing').classList.remove('hidden');
+                document.getElementById('profileContainer').classList.add('hidden');
+                if(statusWidget) statusWidget.classList.remove('hidden');
+            } else {
+                btnProfile.className = "w-full text-left px-4 py-3 rounded-lg text-yellow-500 bg-gray-700 font-bold transition";
+                btnProfile.innerHTML = '<i class="fa-solid fa-user mr-2"></i> Pengaturan Akun';
+
+                btnOrders.className = "w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:text-yellow-500 hover:bg-gray-700 font-bold transition";
+                btnOrders.innerHTML = '<i class="fa-solid fa-list-ul mr-2"></i> Daftar Pesanan';
+
+                document.getElementById('content-ongoing').classList.add('hidden');
+                document.getElementById('profileContainer').classList.remove('hidden');
+                if(statusWidget) statusWidget.classList.add('hidden');
+            }
+        }
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/customer/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('profileNama').value = data.nama_pelanggan;
+                    document.getElementById('profileEmail').value = data.email;
+                    document.getElementById('profileTelepon').value = data.nomor_telepon || '';
+                    document.getElementById('profileAlamat').value = data.alamat || '';
+                }
+            } catch (err) {
+                console.error("Gagal memuat profil:", err);
+            }
+        }
+
+        async function updateProfile(event) {
+            event.preventDefault();
+            const payload = {
+                nama_pelanggan: document.getElementById('profileNama').value,
+                nomor_telepon: document.getElementById('profileTelepon').value,
+                alamat: document.getElementById('profileAlamat').value
+            };
+
+            try {
+                const res = await fetch('/api/customer/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    alert('Profil berhasil diperbarui!');
+                    // Update welcome text in navbar
+                    document.getElementById('welcomeName').innerHTML = `Halo, <span class="text-yellow-500 font-bold">${payload.nama_pelanggan}</span>`;
+                    localStorage.setItem('customer_nama', payload.nama_pelanggan);
+                } else {
+                    const data = await res.json();
+                    alert('Gagal: ' + data.error);
+                }
+            } catch (err) {
+                console.error("Gagal update profil:", err);
+                alert('Terjadi kesalahan saat memperbarui profil.');
+            }
+        }
+
+        loadOrders();
+        loadProfile();
+    </script>
+</body>
+</html>

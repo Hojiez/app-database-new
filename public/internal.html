@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Internal System - Toko Perabotan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .admin-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-900">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
+        <div class="p-6 text-2xl font-bold border-b border-slate-800">
+            Internal Sys
+            <div class="text-sm font-normal text-slate-400" id="userNameDisplay"></div>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="showTab('pos')" class="w-full text-left p-3 rounded hover:bg-slate-800">Kasir / POS</button>
+            <button onclick="showTab('products')" class="w-full text-left p-3 rounded hover:bg-slate-800">Manajemen Barang</button>
+            <button onclick="showTab('customers')" class="w-full text-left p-3 rounded hover:bg-slate-800">Manajemen Pelanggan</button>
+            <button onclick="showTab('dashboard')" class="w-full text-left p-3 rounded hover:bg-slate-800 admin-only">Admin Dashboard</button>
+        </nav>
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="logout()" class="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded">Logout</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Products Tab -->
+        <div id="tab-products" class="tab-content flex-1 overflow-auto p-6 hidden">
+            <div class="flex justify-between mb-4">
+                <h1 class="text-2xl font-bold">Manajemen Barang</h1>
+                <button onclick="openProductModal()" class="bg-blue-600 text-white px-4 py-2 rounded">Tambah Barang</button>
+            </div>
+            <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 border-b">
+                            <th class="p-3">ID</th><th class="p-3">Nama</th><th class="p-3">Kategori</th><th class="p-3">Harga</th><th class="p-3">Stok</th><th class="p-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Customers Tab -->
+        <div id="tab-customers" class="tab-content flex-1 overflow-auto p-6 hidden">
+            <div class="flex justify-between mb-4">
+                <h1 class="text-2xl font-bold">Manajemen Pelanggan</h1>
+                <button onclick="openCustomerModal()" class="bg-blue-600 text-white px-4 py-2 rounded">Tambah Pelanggan</button>
+            </div>
+            <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 border-b">
+                            <th class="p-3">ID</th><th class="p-3">Nama</th><th class="p-3">Email</th><th class="p-3">No. Telp</th><th class="p-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard Tab -->
+        <div id="tab-dashboard" class="tab-content flex-1 overflow-auto p-6 hidden admin-only">
+            <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
+            <div class="grid grid-cols-3 gap-6 mb-6">
+                <div class="bg-blue-600 text-white p-6 rounded shadow">
+                    <h3 class="opacity-80">Total Pendapatan</h3>
+                    <p class="text-2xl font-bold" id="statRev">Rp 0</p>
+                </div>
+                <div class="bg-emerald-600 text-white p-6 rounded shadow">
+                    <h3 class="opacity-80">Total Penjualan</h3>
+                    <p class="text-2xl font-bold" id="statSales">0</p>
+                </div>
+                <div class="bg-orange-600 text-white p-6 rounded shadow">
+                    <h3 class="opacity-80">Stok Menipis</h3>
+                    <p class="text-2xl font-bold" id="statLowStock">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded shadow">
+                <h3 class="font-bold mb-4">Top 3 Produk Terlaris</h3>
+                <ul id="topSellingList" class="space-y-2"></ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <!-- Product Modal -->
+    <div id="productModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-96">
+            <h2 class="text-xl font-bold mb-4" id="pModalTitle">Tambah Barang</h2>
+            <form id="productForm" class="space-y-3">
+                <input type="hidden" id="p_id">
+                <input type="text" id="p_nama" placeholder="Nama Barang" class="w-full p-2 border rounded" required>
+                <select id="p_kat" class="w-full p-2 border rounded" required>
+                    <option value="" disabled selected>Pilih Kategori</option>
+                    <option value="Furnitur">Furnitur</option>
+                    <option value="Elektronik">Elektronik</option>
+                    <option value="Dekorasi">Dekorasi</option>
+                    <option value="Peralatan Dapur">Peralatan Dapur</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+                <input type="number" id="p_harga" placeholder="Harga" class="w-full p-2 border rounded" required>
+                <input type="number" id="p_stok" placeholder="Stok" class="w-full p-2 border rounded" required>
+                <div class="flex gap-2 justify-end mt-4">
+                    <button type="button" onclick="closeModals()" class="px-4 py-2 border rounded">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Modal -->
+    <div id="customerModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-96">
+            <h2 class="text-xl font-bold mb-4" id="cModalTitle">Tambah Pelanggan</h2>
+            <form id="customerForm" class="space-y-3">
+                <input type="text" id="c_id" placeholder="ID Pelanggan" class="w-full p-2 border rounded" required>
+                <input type="text" id="c_nama" placeholder="Nama Pelanggan" class="w-full p-2 border rounded" required>
+                <input type="email" id="c_email" placeholder="Email" class="w-full p-2 border rounded">
+                <input type="text" id="c_telp" placeholder="No. Telepon" class="w-full p-2 border rounded">
+                <textarea id="c_alamat" placeholder="Alamat" class="w-full p-2 border rounded"></textarea>
+                <div class="flex gap-2 justify-end mt-4">
+                    <button type="button" onclick="closeModals()" class="px-4 py-2 border rounded">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('internal_token');
+        const role = localStorage.getItem('internal_role');
+        
+        if (!token) window.location.href = '/internal-login.html';
+
+        document.getElementById('userNameDisplay').innerText = `Role: ${role}`;
+
+        if (role === 'admin') {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+        }
+
+        const apiHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/internal-login.html';
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            if(tabId === 'products') loadProducts();
+            if(tabId === 'customers') loadCustomers();
+            if(tabId === 'dashboard' && role === 'admin') loadDashboard();
+        }
+
+        // --- MANAJEMEN BARANG ---
+        async function loadProducts() {
+            const res = await fetch('/api/internal/barang', { headers: apiHeaders });
+            const data = await res.json();
+            const tbody = document.getElementById('productTable');
+            tbody.innerHTML = '';
+            data.forEach(b => {
+                tbody.innerHTML += `<tr>
+                    <td class="p-3">${b.barang_id}</td>
+                    <td class="p-3">${b.nama_barang}</td>
+                    <td class="p-3">${b.kategori || '-'}</td>
+                    <td class="p-3">Rp ${b.harga.toLocaleString()}</td>
+                    <td class="p-3">${b.stok}</td>
+                    <td class="p-3">
+                        <button onclick="editProduct('${b.barang_id}')" class="text-blue-600 mr-2">Edit</button>
+                        <button onclick="deleteProduct('${b.barang_id}')" class="text-red-600">Hapus</button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        let isEditProduct = false;
+        function openProductModal() {
+            isEditProduct = false;
+            document.getElementById('productForm').reset();
+            document.getElementById('p_id').value = '';
+            document.getElementById('pModalTitle').innerText = 'Tambah Barang';
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        async function editProduct(id) {
+            isEditProduct = true;
+            const res = await fetch('/api/internal/barang', { headers: apiHeaders });
+            const data = await res.json();
+            const b = data.find(x => x.barang_id === id);
+            if(b) {
+                document.getElementById('p_id').value = b.barang_id;
+                document.getElementById('p_id').disabled = true;
+                document.getElementById('p_nama').value = b.nama_barang;
+                document.getElementById('p_kat').value = b.kategori;
+                document.getElementById('p_harga').value = b.harga;
+                document.getElementById('p_stok').value = b.stok;
+                document.getElementById('pModalTitle').innerText = 'Edit Barang';
+                document.getElementById('productModal').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('productForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                nama_barang: document.getElementById('p_nama').value,
+                kategori: document.getElementById('p_kat').value,
+                harga: document.getElementById('p_harga').value,
+                stok: document.getElementById('p_stok').value
+            };
+            
+            const id = document.getElementById('p_id').value;
+            if (isEditProduct) {
+                payload.barang_id = id;
+            }
+
+            const method = isEditProduct ? 'PUT' : 'POST';
+            const url = isEditProduct ? `/api/internal/barang/${id}` : `/api/internal/barang`;
+            
+            try {
+                const res = await fetch(url, { method, headers: apiHeaders, body: JSON.stringify(payload) });
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || 'Failed to save product');
+                }
+                closeModals();
+                loadProducts();
+            } catch (error) {
+                console.error('Frontend Error:', error);
+                alert('Failed to save product');
+            }
+        };
+
+        async function deleteProduct(id) {
+            if(confirm('Hapus barang ini?')) {
+                await fetch(`/api/internal/barang/${id}`, { method: 'DELETE', headers: apiHeaders });
+                loadProducts();
+            }
+        }
+
+        // --- MANAJEMEN PELANGGAN ---
+        async function loadCustomers() {
+            const res = await fetch('/api/internal/pelanggan', { headers: apiHeaders });
+            const data = await res.json();
+            const tbody = document.getElementById('customerTable');
+            tbody.innerHTML = '';
+            data.forEach(c => {
+                tbody.innerHTML += `<tr>
+                    <td class="p-3">${c.pelanggan_id}</td>
+                    <td class="p-3">${c.nama_pelanggan}</td>
+                    <td class="p-3">${c.email || '-'}</td>
+                    <td class="p-3">${c.nomor_telepon || '-'}</td>
+                    <td class="p-3">
+                        <button onclick="editCustomer('${c.pelanggan_id}')" class="text-blue-600 mr-2">Edit</button>
+                        <button onclick="deleteCustomer('${c.pelanggan_id}')" class="text-red-600">Hapus</button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        let isEditCustomer = false;
+        function openCustomerModal() {
+            isEditCustomer = false;
+            document.getElementById('customerForm').reset();
+            document.getElementById('c_id').disabled = false;
+            document.getElementById('cModalTitle').innerText = 'Tambah Pelanggan';
+            document.getElementById('customerModal').classList.remove('hidden');
+        }
+
+        async function editCustomer(id) {
+            isEditCustomer = true;
+            const res = await fetch('/api/internal/pelanggan', { headers: apiHeaders });
+            const data = await res.json();
+            const c = data.find(x => x.pelanggan_id === id);
+            if(c) {
+                document.getElementById('c_id').value = c.pelanggan_id;
+                document.getElementById('c_id').disabled = true;
+                document.getElementById('c_nama').value = c.nama_pelanggan;
+                document.getElementById('c_email').value = c.email || '';
+                document.getElementById('c_telp').value = c.nomor_telepon || '';
+                document.getElementById('c_alamat').value = c.alamat || '';
+                document.getElementById('cModalTitle').innerText = 'Edit Pelanggan';
+                document.getElementById('customerModal').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('customerForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                pelanggan_id: document.getElementById('c_id').value,
+                nama_pelanggan: document.getElementById('c_nama').value,
+                email: document.getElementById('c_email').value,
+                nomor_telepon: document.getElementById('c_telp').value,
+                alamat: document.getElementById('c_alamat').value
+            };
+            const method = isEditCustomer ? 'PUT' : 'POST';
+            const url = isEditCustomer ? `/api/internal/pelanggan/${payload.pelanggan_id}` : `/api/internal/pelanggan`;
+            
+            await fetch(url, { method, headers: apiHeaders, body: JSON.stringify(payload) });
+            closeModals();
+            loadCustomers();
+        };
+
+        async function deleteCustomer(id) {
+            if(confirm('Hapus pelanggan ini?')) {
+                await fetch(`/api/internal/pelanggan/${id}`, { method: 'DELETE', headers: apiHeaders });
+                loadCustomers();
+            }
+        }
+
+        function closeModals() {
+            document.getElementById('productModal').classList.add('hidden');
+            document.getElementById('customerModal').classList.add('hidden');
+        }
+
+        // --- DASHBOARD ADMIN ---
+        async function loadDashboard() {
+            const res = await fetch('/api/admin/stats', { headers: apiHeaders });
+            const data = await res.json();
+            document.getElementById('statRev').innerText = `Rp ${parseInt(data.total_revenue).toLocaleString()}`;
+            document.getElementById('statSales').innerText = data.total_sales;
+            document.getElementById('statLowStock').innerText = data.low_stock_count;
+
+            const resTop = await fetch('/api/admin/top-selling', { headers: apiHeaders });
+            const topData = await resTop.json();
+            const list = document.getElementById('topSellingList');
+            list.innerHTML = '';
+            topData.forEach(item => {
+                list.innerHTML += `<li class="p-2 border-b">${item.nama_barang} - ${item.total_terjual} terjual</li>`;
+            });
+        }
+
+        // --- END OF ADMIN JS ---
+        
+        showTab('products'); // Default tab
+    </script>
+</body>
+</html>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Toko Perabotan Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-qc-kerNSXefgl3mb"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans flex flex-col min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-gray-800 text-white p-4 shadow-md flex justify-between items-center border-b border-gray-700">
+        <div class="text-2xl font-bold text-yellow-500"><a href="/index.html">Toko Perabotan</a></div>
+        
+        <!-- Search Bar -->
+        <div class="relative w-full max-w-md mx-4">
+            <input type="text" id="searchInput" placeholder="Cari perabotan..." class="w-full bg-gray-700 border border-gray-600 text-white px-4 py-2 rounded-full focus:outline-none focus:border-yellow-500 transition">
+            <ul id="searchDropdown" class="absolute w-full hidden z-50 bg-[#1e1e24] border border-gray-700 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto"></ul>
+        </div>
+
+        <div id="navLinks" class="space-x-4">
+            <!-- Dynamic Links -->
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8 max-w-6xl mx-auto w-full">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-100">Katalog Produk</h1>
+            <div class="flex items-center bg-gray-800 p-2 rounded shadow border border-gray-700">
+                <span class="font-bold mr-2 text-gray-300">🛒 Keranjang:</span>
+                <span id="cartCount" class="bg-yellow-500 text-gray-900 px-2 py-1 rounded-full text-xs font-bold">0</span>
+                <button onclick="bukaKeranjang()" class="ml-4 text-yellow-500 hover:text-yellow-400 font-bold text-sm">Lihat & Checkout</button>
+            </div>
+        </div>
+
+        <!-- Category Navigation Grid -->
+        <div class="flex space-x-4 overflow-x-auto pb-4 mb-6">
+            <button onclick="filterCategory('Semua')" class="cat-btn px-4 py-2 bg-gray-800 border border-gray-700 rounded-full hover:bg-yellow-500 hover:text-gray-900 font-semibold transition whitespace-nowrap active-cat">Semua</button>
+            <button onclick="filterCategory('Furnitur')" class="cat-btn px-4 py-2 bg-gray-800 border border-gray-700 rounded-full hover:bg-yellow-500 hover:text-gray-900 font-semibold transition whitespace-nowrap">Furnitur</button>
+            <button onclick="filterCategory('Elektronik')" class="cat-btn px-4 py-2 bg-gray-800 border border-gray-700 rounded-full hover:bg-yellow-500 hover:text-gray-900 font-semibold transition whitespace-nowrap">Elektronik</button>
+            <button onclick="filterCategory('Dekorasi')" class="cat-btn px-4 py-2 bg-gray-800 border border-gray-700 rounded-full hover:bg-yellow-500 hover:text-gray-900 font-semibold transition whitespace-nowrap">Dekorasi</button>
+            <button onclick="filterCategory('Peralatan Dapur')" class="cat-btn px-4 py-2 bg-gray-800 border border-gray-700 rounded-full hover:bg-yellow-500 hover:text-gray-900 font-semibold transition whitespace-nowrap">Peralatan Dapur</button>
+            <button onclick="filterCategory('Lainnya')" class="cat-btn px-4 py-2 bg-gray-800 border border-gray-700 rounded-full hover:bg-yellow-500 hover:text-gray-900 font-semibold transition whitespace-nowrap">Lainnya</button>
+        </div>
+
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Products will be loaded here -->
+        </div>
+    </main>
+
+    <!-- Cart Modal -->
+    <div id="cartModal" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-lg border border-gray-700 text-gray-100">
+            <h2 class="text-2xl font-bold mb-4 border-b border-gray-600 pb-2 text-yellow-500">Keranjang Belanja</h2>
+            <div id="cartItems" class="max-h-60 overflow-y-auto mb-4 space-y-2 pr-2"></div>
+            <div class="border-t border-gray-600 pt-4">
+                <div class="flex justify-between font-bold text-xl mb-4">
+                    <span>Total:</span>
+                    <span id="cartTotal" class="text-yellow-500">Rp 0</span>
+                </div>
+                <div class="mb-4">
+                    <label class="block font-semibold mb-1 text-gray-300">Metode Pembayaran</label>
+                    <select id="metodePembayaran" class="w-full p-2 bg-gray-700 border border-gray-600 rounded text-gray-100 focus:outline-none focus:border-yellow-500">
+                        <option value="QRIS">QRIS (Demo)</option>
+                        <option value="Transfer Bank">Transfer Bank</option>
+                        <option value="Kartu Kredit">Kartu Kredit</option>
+                        <option value="COD">COD (Bayar di Tempat)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="tutupKeranjang()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded font-semibold transition">Batal</button>
+                    <button onclick="checkoutOnline()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded font-bold shadow-lg transition">Pesan Sekarang</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-950 text-gray-500 text-center p-4 border-t border-gray-800">
+        &copy; 2026 Toko Perabotan Online
+    </footer>
+
+    <style>
+        .active-cat {
+            background-color: #EAB308 !important; /* Tailwind yellow-500 */
+            color: #111827 !important; /* Tailwind gray-900 */
+            border-color: #EAB308 !important;
+        }
+    </style>
+
+    <script>
+        const token = localStorage.getItem('customer_token');
+        const nama = localStorage.getItem('customer_nama');
+        let keranjang = JSON.parse(localStorage.getItem('online_cart')) || [];
+        let currentCategory = 'Semua';
+
+        // Setup Navbar
+        const navLinks = document.getElementById('navLinks');
+        if (token) {
+            navLinks.innerHTML = `
+                <span class="mr-4 text-gray-300">Halo, <span class="text-yellow-500 font-bold">${nama}</span></span>
+                <a href="/customer-dashboard.html" class="hover:text-yellow-500 font-semibold transition">Dashboard</a>
+                <button onclick="logoutCustomer()" class="ml-4 bg-gray-700 px-3 py-1 rounded hover:bg-red-500 hover:text-white transition font-semibold">Logout</button>
+            `;
+        } else {
+            navLinks.innerHTML = `
+                <a href="/customer-login.html" class="hover:text-yellow-500 font-semibold transition">Login</a>
+                <a href="/customer-register.html" class="ml-2 bg-yellow-500 text-gray-900 px-4 py-1.5 rounded hover:bg-yellow-400 font-bold shadow transition">Daftar</a>
+                <a href="/internal-login.html" class="text-sm text-gray-500 hover:text-gray-300 ml-4 transition">Staff</a>
+            `;
+        }
+
+        function logoutCustomer() {
+            localStorage.removeItem('customer_token');
+            localStorage.removeItem('customer_nama');
+            window.location.reload();
+        }
+
+        function filterCategory(cat) {
+            currentCategory = cat;
+            
+            // Update UI buttons
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.innerText === cat) {
+                    btn.classList.add('active-cat');
+                } else {
+                    btn.classList.remove('active-cat');
+                }
+            });
+
+            loadKatalog();
+        }
+
+        async function loadKatalog() {
+            let url = '/api/customer/barang';
+            if (currentCategory !== 'Semua') {
+                url += `?kategori=${encodeURIComponent(currentCategory)}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const grid = document.getElementById('productGrid');
+                grid.innerHTML = '';
+                
+                if (data.length === 0) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-gray-500 mt-8">Tidak ada produk dalam kategori ini.</p>';
+                    return;
+                }
+
+                data.forEach(b => {
+                    grid.innerHTML += `
+                        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 flex flex-col hover:border-yellow-500 transition duration-300">
+                            <div class="h-40 bg-gray-700 rounded mb-4 flex items-center justify-center text-gray-500 font-bold tracking-widest">GAMBAR</div>
+                            <h3 class="font-bold text-lg mb-1 text-gray-100">${b.nama_barang}</h3>
+                            <p class="text-sm text-yellow-600 mb-2">${b.kategori || 'Uncategorized'}</p>
+                            <p class="font-black text-white text-xl mb-4">Rp ${b.harga.toLocaleString()}</p>
+                            <div class="mt-auto">
+                                <button onclick="tambahKeKeranjang(${b.barang_id}, '${b.nama_barang}', ${b.harga})" class="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 rounded shadow transition">
+                                    Tambah ke Keranjang
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                updateCartCount();
+            } catch (err) {
+                console.error("Gagal memuat produk:", err);
+            }
+        }
+
+        function tambahKeKeranjang(id, nama, harga) {
+            const existing = keranjang.find(k => k.id_barang === id);
+            if (existing) {
+                existing.jumlah++;
+            } else {
+                keranjang.push({ id_barang: id, nama_barang: nama, harga: harga, jumlah: 1 });
+            }
+            saveCart();
+            
+            // Brief visual feedback without annoying alert
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "✓ Ditambahkan";
+            btn.classList.replace("bg-yellow-500", "bg-green-500");
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.replace("bg-green-500", "bg-yellow-500");
+            }, 1000);
+        }
+
+        function saveCart() {
+            localStorage.setItem('online_cart', JSON.stringify(keranjang));
+            updateCartCount();
+        }
+
+        function updateCartCount() {
+            document.getElementById('cartCount').innerText = keranjang.reduce((sum, i) => sum + i.jumlah, 0);
+        }
+
+        function bukaKeranjang() {
+            const list = document.getElementById('cartItems');
+            list.innerHTML = '';
+            let total = 0;
+            
+            if (keranjang.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 italic">Keranjang masih kosong.</p>';
+            } else {
+                keranjang.forEach((item, i) => {
+                    const sub = item.harga * item.jumlah;
+                    total += sub;
+                    list.innerHTML += `
+                        <div class="flex justify-between items-center border-b border-gray-700 pb-3 mt-2">
+                            <div>
+                                <div class="font-bold text-gray-200">${item.nama_barang}</div>
+                                <div class="text-sm text-gray-400">${item.jumlah} x Rp ${item.harga.toLocaleString()}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-yellow-500">Rp ${sub.toLocaleString()}</div>
+                                <button onclick="hapusItemKeranjang(${i})" class="text-red-400 text-xs hover:text-red-300 uppercase tracking-wider font-bold mt-1">Hapus</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('cartTotal').innerText = `Rp ${total.toLocaleString()}`;
+            document.getElementById('cartModal').classList.remove('hidden');
+        }
+
+        function hapusItemKeranjang(index) {
+            keranjang.splice(index, 1);
+            saveCart();
+            bukaKeranjang();
+        }
+
+        function tutupKeranjang() {
+            document.getElementById('cartModal').classList.add('hidden');
+        }
+
+        async function checkoutOnline() {
+            if (keranjang.length === 0) return alert('Keranjang kosong!');
+            if (!token) {
+                alert('Silakan login terlebih dahulu untuk melakukan pesanan.');
+                window.location.href = '/customer-login.html';
+                return;
+            }
+
+            const metode = document.getElementById('metodePembayaran').value;
+            const payload = { items: keranjang, metode_pembayaran: metode };
+
+            try {
+                const res = await fetch('/api/customer/order', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    if (data.token) {
+                        window.snap.pay(data.token, {
+                            onSuccess: function(result){
+                                alert('Payment success!');
+                                keranjang = [];
+                                saveCart();
+                                window.location.href = '/customer-dashboard.html';
+                            },
+                            onPending: function(result){
+                                alert('Waiting for your payment!');
+                                keranjang = [];
+                                saveCart();
+                                window.location.href = '/customer-dashboard.html';
+                            },
+                            onError: function(result){
+                                alert('Payment failed!');
+                            },
+                            onClose: function(){
+                                alert('You closed the popup without finishing the payment');
+                                keranjang = [];
+                                saveCart();
+                                window.location.href = '/customer-dashboard.html';
+                            }
+                        });
+                    } else {
+                        alert('Pesanan berhasil dibuat!');
+                        keranjang = [];
+                        saveCart();
+                        window.location.href = '/customer-dashboard.html';
+                    }
+                } else {
+                    alert('Gagal: ' + data.message || data.error);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Terjadi kesalahan.');
+            }
+        }
+
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        const searchDropdown = document.getElementById('searchDropdown');
+
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                searchDropdown.classList.add('hidden');
+                searchDropdown.innerHTML = '';
+                if (query.length === 0) loadKatalog(); // Reset catalog when cleared
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/customer/search?q=${encodeURIComponent(query)}`);
+                    const results = await res.json();
+
+                    searchDropdown.innerHTML = '';
+                    if (results.length > 0) {
+                        results.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'px-4 py-2 hover:bg-gray-700 hover:text-yellow-500 cursor-pointer transition border-b border-gray-700 last:border-b-0';
+                            li.innerHTML = `<div class="font-bold">${item.nama_barang}</div><div class="text-xs text-gray-400">Rp ${item.harga.toLocaleString()}</div>`;
+                            li.onclick = () => {
+                                searchInput.value = item.nama_barang;
+                                searchDropdown.classList.add('hidden');
+                                filterBySearch(item.nama_barang);
+                            };
+                            searchDropdown.appendChild(li);
+                        });
+                        searchDropdown.classList.remove('hidden');
+                    } else {
+                        searchDropdown.innerHTML = '<li class="px-4 py-2 text-gray-500 italic">Tidak ditemukan</li>';
+                        searchDropdown.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    console.error("Search error:", err);
+                }
+            }, 300);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                searchDropdown.classList.add('hidden');
+            }
+        });
+
+        async function filterBySearch(namaBarang) {
+            try {
+                // Remove active class from categories
+                document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active-cat'));
+                currentCategory = 'Semua';
+
+                const res = await fetch('/api/customer/barang');
+                const data = await res.json();
+                
+                const filteredData = data.filter(b => b.nama_barang.toLowerCase() === namaBarang.toLowerCase());
+                
+                const grid = document.getElementById('productGrid');
+                grid.innerHTML = '';
+                
+                if (filteredData.length === 0) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-gray-500 mt-8">Produk tidak ditemukan.</p>';
+                    return;
+                }
+
+                filteredData.forEach(b => {
+                    grid.innerHTML += `
+                        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 flex flex-col hover:border-yellow-500 transition duration-300">
+                            <div class="h-40 bg-gray-700 rounded mb-4 flex items-center justify-center text-gray-500 font-bold tracking-widest">GAMBAR</div>
+                            <h3 class="font-bold text-lg mb-1 text-gray-100">${b.nama_barang}</h3>
+                            <p class="text-sm text-yellow-600 mb-2">${b.kategori || 'Uncategorized'}</p>
+                            <p class="font-black text-white text-xl mb-4">Rp ${b.harga.toLocaleString()}</p>
+                            <button onclick="tambahKeKeranjang(${b.barang_id}, '${b.nama_barang.replace(/'/g, "\\'")}', ${b.harga})" class="mt-auto bg-gray-700 hover:bg-yellow-500 hover:text-gray-900 text-white font-bold py-2 px-4 rounded transition">Tambah ke Keranjang</button>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        loadKatalog();
+    </script>
+</body>
+</html>
