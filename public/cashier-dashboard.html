@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashier Dashboard (Kiosk Monitor)</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel to parse JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-100 p-8 font-sans">
+    
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function CashierDashboard() {
+            const [orders, setOrders] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            // Fetch pending cash orders
+            const fetchOrders = async () => {
+                try {
+                    const response = await fetch('/api/cashier/pending');
+                    if (!response.ok) throw new Error('Gagal mengambil data pesanan.');
+                    const data = await response.json();
+                    setOrders(data);
+                    setError(null);
+                } catch (err) {
+                    console.error(err);
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Poll the API every 5 seconds to feel "live"
+            useEffect(() => {
+                fetchOrders();
+                const intervalId = setInterval(fetchOrders, 5000);
+                return () => clearInterval(intervalId); // Cleanup interval on unmount
+            }, []);
+
+            // Update transaction status (Accept or Deny)
+            const updateStatus = async (transaction_id, new_status) => {
+                try {
+                    // Optimistic UI update could go here, but we will rely on re-fetching to ensure sync
+                    const response = await fetch('/api/cashier/update-status', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ transaction_id, new_status }),
+                    });
+                    
+                    if (!response.ok) throw new Error('Gagal mengupdate status pesanan.');
+                    
+                    // Re-fetch immediately to remove the item from the screen
+                    fetchOrders();
+                } catch (err) {
+                    console.error(err);
+                    alert('Error: ' + err.message);
+                }
+            };
+
+            if (loading && orders.length === 0) {
+                return <div className="text-center mt-10 text-xl font-semibold text-slate-600">Memuat Dashboard Kasir...</div>;
+            }
+
+            return (
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex justify-between items-center mb-8">
+                        <h1 className="text-3xl font-bold text-slate-800">Monitor Kasir - Pesanan Kiosk Walk-in</h1>
+                        <div className="flex items-center space-x-2">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">Live Sync</span>
+                        </div>
+                    </div>
+                    
+                    {error && (
+                        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow mb-6">
+                            <p className="font-bold">Error</p>
+                            <p>{error}</p>
+                        </div>
+                    )}
+
+                    {orders.length === 0 ? (
+                        <div className="bg-white p-12 rounded-xl shadow-sm text-center border border-slate-200">
+                            <svg className="mx-auto h-12 w-12 text-slate-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <h3 className="mt-2 text-lg font-medium text-slate-900">Belum ada pesanan masuk</h3>
+                            <p className="mt-1 text-slate-500">Pesanan Tunai (Walk-in) yang tertunda dari Kiosk akan muncul di sini secara otomatis.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {orders.map(order => (
+                                <div key={order.transaksi_id} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-slate-200 flex flex-col">
+                                    <div className="bg-slate-800 text-white px-5 py-4 flex justify-between items-center">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">ID Transaksi</span>
+                                            <span className="font-mono font-bold text-lg">{order.transaksi_id}</span>
+                                        </div>
+                                        <div className="text-right flex flex-col">
+                                            <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Waktu</span>
+                                            <span className="font-semibold">{new Date(order.tanggal_transaksi).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="p-5 flex-1 flex flex-col">
+                                        <div className="mb-auto">
+                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Daftar Item</h3>
+                                            <ul className="space-y-3 mb-6">
+                                                {order.items && order.items.map((item, idx) => {
+                                                    // Handle edge case where JOIN returns a null row if detail_transaksi is empty
+                                                    if (!item.nama_barang && !item.jumlah_barang) return null;
+                                                    return (
+                                                        <li key={idx} className="flex justify-between items-start text-sm">
+                                                            <div className="flex items-start">
+                                                                <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded mr-3">{item.jumlah_barang}x</span>
+                                                                <span className="text-slate-600 font-medium">{item.nama_barang || 'Item Tidak Diketahui'}</span>
+                                                            </div>
+                                                            <span className="font-semibold text-slate-800">Rp {Number(item.subtotal || 0).toLocaleString('id-ID')}</span>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        </div>
+                                        
+                                        <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-end mb-6 bg-slate-50 p-4 rounded-lg">
+                                            <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Total Pembayaran</span>
+                                            <span className="text-2xl font-black text-emerald-600">Rp {Number(order.total_harga || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+
+                                        <div className="flex space-x-3 w-full">
+                                            <button 
+                                                onClick={() => updateStatus(order.transaksi_id, 'Completed')}
+                                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors duration-200 flex items-center justify-center gap-2"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                                                Terima Pembayaran
+                                            </button>
+                                            <button 
+                                                onClick={() => updateStatus(order.transaksi_id, 'Cancelled')}
+                                                className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl shadow-sm transition-colors duration-200 border border-red-200 flex items-center justify-center gap-2"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                Tolak
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CashierDashboard />);
+    </script>
+</body>
+</html>

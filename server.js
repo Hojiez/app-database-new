@@ -31,7 +31,11 @@ pool.connect((err) => {
 });
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: '*', // Or specify your Expo web port, e.g., 'http://localhost:8081'
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -681,7 +685,92 @@ app.post('/api/midtrans/webhook', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
+// ==========================================
+// CASHIER DASHBOARD (KIOSK MONITORING)
+// ==========================================
+
+app.get('/api/cashier/pending', async (req, res) => {
+    try {
+        const query = `
+            SELECT t.transaksi_id, t.tanggal_transaksi, t.total_harga, t.status_transaksi,
+                json_agg(json_build_object(
+                    'nama_barang', b.nama_barang,
+                    'jumlah_barang', d.jumlah_barang,
+                    'subtotal', d.subtotal
+                )) as items
+            FROM transaksi t
+            LEFT JOIN detail_transaksi d ON t.transaksi_id = d.transaksi_id
+            LEFT JOIN barang b ON d.barang_id = b.barang_id
+            WHERE t.status_transaksi = 'Pending' AND t.metode_pembayaran = 'Tunai'
+            GROUP BY t.transaksi_id
+            ORDER BY t.tanggal_transaksi ASC
+        `;
+        const results = await pool.query(query);
+        res.json(results.rows);
+    } catch (err) {
+        console.error("Fetch cashier pending error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/cashier/update-status', async (req, res) => {
+    const { transaction_id, new_status } = req.body;
+    try {
+        await pool.query(
+            "UPDATE transaksi SET status_transaksi = $1 WHERE transaksi_id = $2",
+            [new_status, transaction_id]
+        );
+        res.json({ success: true, message: `Status updated to ${new_status}` });
+    } catch (err) {
+        console.error("Update cashier status error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// KIOSK POS (WALK-IN CHECKOUT)
+// ==========================================
+app.post('/api/checkout', async (req, res) => {
+    const { user_id, metode_pembayaran, status_transaksi, total_harga, items } = req.body;
+    
+    try {
+        await pool.query('BEGIN');
+        
+        const transaksiId = 'TRX' + Date.now().toString().slice(-9);
+        
+        // 1. Insert into transaksi
+        await pool.query(
+            "INSERT INTO transaksi (transaksi_id, user_id, pelanggan_id, tanggal_transaksi, total_harga, metode_pembayaran, status_transaksi) VALUES ($1, $2, null, CURRENT_TIMESTAMP, $3, $4, $5)",
+            [transaksiId, user_id, total_harga, metode_pembayaran, status_transaksi]
+        );
+        
+        // 2. Insert details and update stock
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const detailId = 'DTL' + Date.now().toString().slice(-9) + i;
+            
+            await pool.query(
+                "INSERT INTO detail_transaksi (detail_id, transaksi_id, barang_id, jumlah_barang, harga_satuan, subtotal) VALUES ($1, $2, $3, $4, $5, $6)",
+                [detailId, transaksiId, item.barang_id, item.jumlah_barang, item.harga_satuan, item.subtotal]
+            );
+            
+            await pool.query(
+                "UPDATE barang SET stok = stok - $1 WHERE barang_id = $2",
+                [item.jumlah_barang, item.barang_id]
+            );
+        }
+        
+        await pool.query('COMMIT');
+        res.json({ success: true, message: 'Kiosk checkout berhasil', transaksi_id: transaksiId });
+        
+    } catch (err) {
+        await pool.query('ROLLBACK');
+        console.error("KIOSK CHECKOUT ERROR:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server berjalan di port ${PORT}`);
 });

@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Internal System - Toko Perabotan</title>
+    <!-- React & ReactDOM via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel to parse JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -31,6 +36,21 @@
     <!-- Main Content -->
     <main class="flex-1 flex flex-col overflow-hidden">
         
+        <!-- POS Tab -->
+        <div id="tab-pos" class="tab-content flex-1 overflow-auto p-6 hidden">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-slate-800">Monitor Kasir - Pesanan Walk-in</h1>
+                <div class="flex items-center space-x-2">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-sm font-semibold text-slate-600 uppercase tracking-wider">Live Sync</span>
+                </div>
+            </div>
+            <div id="pending-orders-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+
         <!-- Products Tab -->
         <div id="tab-products" class="tab-content flex-1 overflow-auto p-6 hidden">
             <div class="flex justify-between mb-4">
@@ -158,8 +178,16 @@
         }
 
         function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('flex', 'flex-col');
+            });
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) {
+                activeTab.classList.remove('hidden');
+                // Use flex and flex-col so that internal elements expand properly
+                activeTab.classList.add('flex', 'flex-col');
+            }
             
             if(tabId === 'products') loadProducts();
             if(tabId === 'customers') loadCustomers();
@@ -345,7 +373,113 @@
 
         // --- END OF ADMIN JS ---
         
-        showTab('products'); // Default tab
+        // --- CASHIER DASHBOARD (POS) ---
+        async function fetchPendingOrders() {
+            try {
+                const res = await fetch('/api/cashier/pending', { headers: apiHeaders });
+                if (!res.ok) throw new Error('Gagal mengambil data pesanan.');
+                const orders = await res.json();
+                
+                const container = document.getElementById('pending-orders-container');
+                container.innerHTML = '';
+                
+                if (orders.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-slate-200">
+                            <svg class="mx-auto h-12 w-12 text-slate-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <h3 class="mt-2 text-lg font-medium text-slate-900">Belum ada pesanan masuk</h3>
+                            <p class="mt-1 text-slate-500">Pesanan Tunai (Walk-in) yang tertunda dari Kiosk akan muncul di sini secara otomatis.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                orders.forEach(order => {
+                    const timeString = new Date(order.tanggal_transaksi).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    
+                    let itemsHtml = '';
+                    if (order.items) {
+                        order.items.forEach(item => {
+                            if (!item.nama_barang && !item.jumlah_barang) return;
+                            itemsHtml += `
+                                <li class="flex justify-between items-start text-sm">
+                                    <div class="flex items-start">
+                                        <span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded mr-3">${item.jumlah_barang}x</span>
+                                        <span class="text-slate-600 font-medium">${item.nama_barang || 'Item Tidak Diketahui'}</span>
+                                    </div>
+                                    <span class="font-semibold text-slate-800">Rp ${Number(item.subtotal || 0).toLocaleString('id-ID')}</span>
+                                </li>
+                            `;
+                        });
+                    }
+
+                    container.innerHTML += `
+                        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-slate-200 flex flex-col">
+                            <div class="bg-slate-800 text-white px-5 py-4 flex justify-between items-center">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-400 uppercase tracking-wider mb-1">ID Transaksi</span>
+                                    <span class="font-mono font-bold text-lg">${order.transaksi_id}</span>
+                                </div>
+                                <div class="text-right flex flex-col">
+                                    <span class="text-xs text-slate-400 uppercase tracking-wider mb-1">Waktu</span>
+                                    <span class="font-semibold">${timeString}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-5 flex-1 flex flex-col">
+                                <div class="mb-auto">
+                                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Daftar Item</h3>
+                                    <ul class="space-y-3 mb-6">
+                                        ${itemsHtml}
+                                    </ul>
+                                </div>
+                                
+                                <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-end mb-6 bg-slate-50 p-4 rounded-lg">
+                                    <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Total Pembayaran</span>
+                                    <span class="text-2xl font-black text-emerald-600">Rp ${Number(order.total_harga || 0).toLocaleString('id-ID')}</span>
+                                </div>
+
+                                <div class="flex space-x-3 w-full">
+                                    <button onclick="updateOrderStatus('${order.transaksi_id}', 'Selesai')" class="btn-terima flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors duration-200 flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        Terima Pembayaran
+                                    </button>
+                                    <button onclick="updateOrderStatus('${order.transaksi_id}', 'Dibatalkan')" class="btn-tolak flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl shadow-sm transition-colors duration-200 border border-red-200 flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        Tolak
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function updateOrderStatus(transaction_id, new_status) {
+            try {
+                const res = await fetch('/api/cashier/update-status', {
+                    method: 'PUT',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ transaction_id, new_status })
+                });
+                if (!res.ok) throw new Error('Gagal mengupdate status pesanan.');
+                fetchPendingOrders(); // Refresh screen
+            } catch (err) {
+                console.error(err);
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // Start polling for pending orders
+        setInterval(fetchPendingOrders, 5000);
+        fetchPendingOrders();
+
+        showTab('pos'); // Default tab to POS
     </script>
 </body>
 </html>
