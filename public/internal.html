@@ -88,8 +88,8 @@
         </div>
 
         <!-- Admin Dashboard Tab -->
-        <div id="tab-dashboard" class="tab-content flex-1 overflow-auto p-6 hidden admin-only">
-            <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
+        <div id="tab-dashboard" class="tab-content flex-1 overflow-auto p-6 hidden bg-slate-50 admin-only">
+            <h1 class="text-2xl font-bold mb-6 text-slate-800">Admin Dashboard</h1>
             <div class="grid grid-cols-3 gap-6 mb-6">
                 <div class="bg-blue-600 text-white p-6 rounded shadow">
                     <h3 class="opacity-80">Total Pendapatan</h3>
@@ -104,9 +104,30 @@
                     <p class="text-2xl font-bold" id="statLowStock">0</p>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded shadow">
+            
+            <div class="bg-white p-6 rounded shadow mb-8">
                 <h3 class="font-bold mb-4">Top 3 Produk Terlaris</h3>
                 <ul id="topSellingList" class="space-y-2"></ul>
+            </div>
+
+            <!-- AI Trends Section Inside Admin Dashboard -->
+            <div class="flex justify-between items-center mb-6 pt-6 border-t border-slate-200">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Rekomendasi Tren AI <span class="text-sm font-normal text-indigo-500 bg-indigo-100 px-2 py-1 rounded ml-2">Powered by Gemini</span></h2>
+                    <p class="text-slate-500 mt-1">Analisis prediktif berbasis data penjualan 30 hari terakhir.</p>
+                </div>
+                <button onclick="generateAITrends()" id="btnGenerateAI" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-all flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Generate Analisis
+                </button>
+            </div>
+            
+            <div id="ai-trends-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- AI cards will render here -->
+                <div class="col-span-full text-center py-20 text-slate-400">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    <p>Klik tombol "Generate Analisis" untuk memulai prediksi tren.</p>
+                </div>
             </div>
         </div>
     </main>
@@ -164,7 +185,7 @@
         document.getElementById('userNameDisplay').innerText = `Role: ${role}`;
 
         if (role === 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-only'));
         }
 
         const apiHeaders = {
@@ -178,6 +199,11 @@
         }
 
         function showTab(tabId) {
+            // Strict Role Isolation: Block non-admins from loading or viewing the Admin Dashboard
+            if (tabId === 'dashboard' && role !== 'admin') {
+                return;
+            }
+
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.add('hidden');
                 el.classList.remove('flex', 'flex-col');
@@ -369,6 +395,66 @@
             topData.forEach(item => {
                 list.innerHTML += `<li class="p-2 border-b">${item.nama_barang} - ${item.total_terjual} terjual</li>`;
             });
+        }
+
+        // --- AI TRENDS ---
+        async function generateAITrends() {
+            const btn = document.getElementById('btnGenerateAI');
+            const container = document.getElementById('ai-trends-container');
+            
+            // Loading State
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menganalisis...`;
+            container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">
+                <svg class="animate-spin h-12 w-12 mx-auto text-indigo-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <p class="font-medium text-slate-600">Gemini sedang memproses jutaan data transaksi...</p>
+            </div>`;
+
+            try {
+                const res = await fetch('/api/admin/ai-trends', { headers: apiHeaders });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Gagal memuat AI Trends');
+
+                container.innerHTML = '';
+                
+                data.forEach((item, index) => {
+                    const rankBadge = index === 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-slate-100 text-slate-600 border-slate-200';
+                    const rankIcon = index === 0 ? '👑' : `#${index + 1}`;
+                    
+                    container.innerHTML += `
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all transform hover:-translate-y-1">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${rankBadge}">
+                                    ${rankIcon} Top Trending
+                                </span>
+                                <span class="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-md text-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                    +${item.predicted_growth_percentage}%
+                                </span>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">${item.item_name}</h3>
+                            <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50">
+                                <p class="text-slate-600 text-sm leading-relaxed flex gap-2">
+                                    <span class="text-indigo-400">✨</span>
+                                    ${item.reasoning_indonesian}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="col-span-full text-center py-20 text-red-500">
+                    <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <p class="font-bold">Gagal terhubung ke AI. Silakan coba lagi.</p>
+                    <p class="text-sm mt-1 opacity-80">${err.message}</p>
+                </div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Generate Ulang`;
+            }
         }
 
         // --- END OF ADMIN JS ---

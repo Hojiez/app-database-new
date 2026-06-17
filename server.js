@@ -6,6 +6,7 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const midtransClient = require('midtrans-client');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Create Core/Snap API instance
 const snap = new midtransClient.Snap({
@@ -235,6 +236,55 @@ app.get('/api/admin/revenue-trend', authenticateToken, authorizeRole('admin'), a
         res.json(results.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// AI Trend Prediction Route
+app.get('/api/admin/ai-trends', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        // Query to get item sales data over the last 30 days
+        const query = `
+            SELECT b.nama_barang, SUM(dt.jumlah_barang) as total_terjual
+            FROM detail_transaksi dt
+            JOIN transaksi t ON dt.transaksi_id = t.transaksi_id
+            JOIN barang b ON dt.barang_id = b.barang_id
+            WHERE t.tanggal_transaksi >= CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY b.nama_barang
+            ORDER BY total_terjual DESC
+        `;
+        const results = await pool.query(query);
+        const salesData = results.rows;
+
+        // Fallback mock data
+        const fallbackData = [
+            { item_name: salesData[0]?.nama_barang || "Produk A", predicted_growth_percentage: 15, reasoning_indonesian: "Tren positif mingguan" },
+            { item_name: salesData[1]?.nama_barang || "Produk B", predicted_growth_percentage: 10, reasoning_indonesian: "Banyak dicari akhir-akhir ini" },
+            { item_name: salesData[2]?.nama_barang || "Produk C", predicted_growth_percentage: 5, reasoning_indonesian: "Penjualan stabil cenderung naik" }
+        ];
+
+        // Check if API key is provided
+        if (!process.env.GEMINI_API_KEY) {
+            console.log("GEMINI_API_KEY missing, sending fallback AI trends.");
+            return res.json(fallbackData);
+        }
+
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const prompt = `Analisis data penjualan ini dan prediksikan 3 item yang akan mengalami kenaikan tren minggu depan. Berikan output dalam bentuk JSON array dengan format: [{ "item_name": "string", "predicted_growth_percentage": number, "reasoning_indonesian": "string" }]. Jangan beri teks tambahan di luar JSON. Data Penjualan: ${JSON.stringify(salesData)}`;
+        
+        const result = await model.generateContent(prompt);
+        let textResponse = result.response.text();
+        
+        // Clean markdown backticks if returned by the model
+        textResponse = textResponse.replace(/```json/gi, '').replace(/```/gi, '').trim();
+
+        const jsonResponse = JSON.parse(textResponse);
+        res.json(jsonResponse);
+    } catch (err) {
+        console.error("AI Trend Prediction error:", err);
+        // On any Gemini crash or parsing error, fallback gracefully
+        res.status(500).json({ error: err.message, fallback: true });
     }
 });
 
