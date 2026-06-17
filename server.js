@@ -715,13 +715,38 @@ app.get('/api/cashier/pending', async (req, res) => {
 
 app.put('/api/cashier/update-status', async (req, res) => {
     const { transaction_id, new_status } = req.body;
+    
     try {
+        await pool.query('BEGIN');
+
+        // 1. Update the transaction status
         await pool.query(
             "UPDATE transaksi SET status_transaksi = $1 WHERE transaksi_id = $2",
             [new_status, transaction_id]
         );
-        res.json({ success: true, message: `Status updated to ${new_status}` });
+
+        // 2. ONLY if the new status is 'Selesai', deduct the stock
+        if (new_status === 'Selesai') {
+            // Get the items for this specific transaction
+            const detailRes = await pool.query(
+                "SELECT barang_id, jumlah_barang FROM detail_transaksi WHERE transaksi_id = $1",
+                [transaction_id]
+            );
+
+            // Loop and deduct
+            for (let i = 0; i < detailRes.rows.length; i++) {
+                const item = detailRes.rows[i];
+                await pool.query(
+                    "UPDATE barang SET stok = stok - $1 WHERE barang_id = $2",
+                    [item.jumlah_barang, item.barang_id]
+                );
+            }
+        }
+
+        await pool.query('COMMIT');
+        res.json({ success: true, message: `Status updated to ${new_status} and stock adjusted if necessary.` });
     } catch (err) {
+        await pool.query('ROLLBACK');
         console.error("Update cashier status error:", err);
         res.status(500).json({ error: err.message });
     }
