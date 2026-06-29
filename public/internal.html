@@ -26,6 +26,10 @@
             <button onclick="showTab('pos')" class="w-full text-left p-3 rounded hover:bg-slate-800">Kasir / POS</button>
             <button onclick="showTab('products')" class="w-full text-left p-3 rounded hover:bg-slate-800">Manajemen Barang</button>
             <button onclick="showTab('customers')" class="w-full text-left p-3 rounded hover:bg-slate-800">Manajemen Pelanggan</button>
+            <button onclick="showTab('orders')" class="w-full text-left p-3 rounded hover:bg-slate-800 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 9V3m0 13a3 3 0 11-6 0m6 0a3 3 0 10-6 0"></path></svg>
+                Manajemen Pesanan
+            </button>
             <button onclick="showTab('dashboard')" class="w-full text-left p-3 rounded hover:bg-slate-800 admin-only">Admin Dashboard</button>
         </nav>
         <div class="p-4 border-t border-slate-800">
@@ -87,46 +91,70 @@
             </div>
         </div>
 
+        <!-- Orders Tab -->
+        <div id="tab-orders" class="tab-content flex-1 overflow-auto p-6 hidden">
+            <div class="flex justify-between mb-4">
+                <h1 class="text-2xl font-bold">Manajemen Pesanan</h1>
+            </div>
+            <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 border-b">
+                            <th class="p-3">ID Transaksi</th>
+                            <th class="p-3">ID Pelanggan</th>
+                            <th class="p-3">Waktu</th>
+                            <th class="p-3">Total</th>
+                            <th class="p-3">Status Saat Ini</th>
+                            <th class="p-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderTable"></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Admin Dashboard Tab -->
         <div id="tab-dashboard" class="tab-content flex-1 overflow-auto p-6 hidden bg-slate-50 admin-only">
-            <h1 class="text-2xl font-bold mb-6 text-slate-800">Admin Dashboard</h1>
-            <div class="grid grid-cols-3 gap-6 mb-6">
-                <div class="bg-blue-600 text-white p-6 rounded shadow">
-                    <h3 class="opacity-80">Total Pendapatan</h3>
-                    <p class="text-2xl font-bold" id="statRev">Rp 0</p>
+            <div>
+                <h1 class="text-2xl font-bold mb-6 text-slate-800">Admin Dashboard</h1>
+                <div class="grid grid-cols-3 gap-6 mb-6">
+                    <div class="bg-blue-600 text-white p-6 rounded shadow">
+                        <h3 class="opacity-80">Total Pendapatan</h3>
+                        <p class="text-2xl font-bold" id="statRev">Rp 0</p>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-6 rounded shadow">
+                        <h3 class="opacity-80">Total Penjualan</h3>
+                        <p class="text-2xl font-bold" id="statSales">0</p>
+                    </div>
+                    <div class="bg-orange-600 text-white p-6 rounded shadow">
+                        <h3 class="opacity-80">Stok Menipis</h3>
+                        <p class="text-2xl font-bold" id="statLowStock">0</p>
+                    </div>
                 </div>
-                <div class="bg-emerald-600 text-white p-6 rounded shadow">
-                    <h3 class="opacity-80">Total Penjualan</h3>
-                    <p class="text-2xl font-bold" id="statSales">0</p>
+                
+                <div class="bg-white p-6 rounded shadow mb-8">
+                    <h3 class="font-bold mb-4">Top 3 Produk Terlaris</h3>
+                    <ul id="topSellingList" class="space-y-2"></ul>
                 </div>
-                <div class="bg-orange-600 text-white p-6 rounded shadow">
-                    <h3 class="opacity-80">Stok Menipis</h3>
-                    <p class="text-2xl font-bold" id="statLowStock">0</p>
-                </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded shadow mb-8">
-                <h3 class="font-bold mb-4">Top 3 Produk Terlaris</h3>
-                <ul id="topSellingList" class="space-y-2"></ul>
-            </div>
 
-            <!-- AI Trends Section Inside Admin Dashboard -->
-            <div class="flex justify-between items-center mb-6 pt-6 border-t border-slate-200">
-                <div>
-                    <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Rekomendasi Tren AI <span class="text-sm font-normal text-indigo-500 bg-indigo-100 px-2 py-1 rounded ml-2">Powered by Gemini</span></h2>
-                    <p class="text-slate-500 mt-1">Analisis prediktif berbasis data penjualan 30 hari terakhir.</p>
+                <!-- AI Trends Section Inside Admin Dashboard -->
+                <div class="flex justify-between items-center mb-6 pt-6 border-t border-slate-200">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Rekomendasi Tren AI <span class="text-sm font-normal text-indigo-500 bg-indigo-100 px-2 py-1 rounded ml-2">Powered by Gemini</span></h2>
+                        <p class="text-slate-500 mt-1">Analisis prediktif berbasis data penjualan 30 hari terakhir.</p>
+                    </div>
+                    <button onclick="generateAITrends()" id="btnGenerateAI" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-all flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Generate Analisis
+                    </button>
                 </div>
-                <button onclick="generateAITrends()" id="btnGenerateAI" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    Generate Analisis
-                </button>
-            </div>
-            
-            <div id="ai-trends-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- AI cards will render here -->
-                <div class="col-span-full text-center py-20 text-slate-400">
-                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                    <p>Klik tombol "Generate Analisis" untuk memulai prediksi tren.</p>
+                
+                <div id="ai-trends-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- AI cards will render here -->
+                    <div class="col-span-full text-center py-20 text-slate-400">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        <p>Klik tombol "Generate Analisis" untuk memulai prediksi tren.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -176,6 +204,34 @@
         </div>
     </div>
 
+    <!-- Order Detail Modal -->
+    <div id="orderDetailModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50" onclick="closeOrderDetailModal()">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl transform transition-all" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 class="text-xl font-bold text-slate-800">Detail Pesanan</h2>
+                <button onclick="closeOrderDetailModal()" class="text-2xl leading-none font-bold text-slate-500 hover:text-slate-800">&times;</button>
+            </div>
+            <div id="modal-content-container">
+                <!-- Loading state -->
+                <div id="modal-loading" class="text-center p-8">
+                    <p>Memuat detail pesanan...</p>
+                </div>
+                <!-- Data state -->
+                <div id="modal-data" class="hidden">
+                    <div>
+                        <h3 class="font-bold text-slate-600 mb-2">Item yang Dipesan</h3>
+                        <ul id="modalItemList" class="list-disc pl-5 space-y-1 text-slate-700 bg-slate-50 p-4 rounded-lg">
+                            <!-- Items will be populated here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+             <div class="flex gap-2 justify-end mt-6 border-t pt-4">
+                <button type="button" onclick="closeOrderDetailModal()" class="px-5 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const token = localStorage.getItem('internal_token');
         const role = localStorage.getItem('internal_role');
@@ -185,7 +241,7 @@
         document.getElementById('userNameDisplay').innerText = `Role: ${role}`;
 
         if (role === 'admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-only'));
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
         }
 
         const apiHeaders = {
@@ -199,25 +255,136 @@
         }
 
         function showTab(tabId) {
-            // Strict Role Isolation: Block non-admins from loading or viewing the Admin Dashboard
+            // Strict Role Isolation: Block non-admins from accessing the Admin Dashboard
             if (tabId === 'dashboard' && role !== 'admin') {
                 return;
             }
 
+            // Hide all main content sections/tabs first
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.add('hidden');
-                el.classList.remove('flex', 'flex-col');
             });
+
+            // Show only the selected tab
             const activeTab = document.getElementById(`tab-${tabId}`);
             if (activeTab) {
                 activeTab.classList.remove('hidden');
-                // Use flex and flex-col so that internal elements expand properly
-                activeTab.classList.add('flex', 'flex-col');
             }
             
+            // Load the necessary data for the now-visible tab
             if(tabId === 'products') loadProducts();
             if(tabId === 'customers') loadCustomers();
             if(tabId === 'dashboard' && role === 'admin') loadDashboard();
+            if(tabId === 'orders') loadOrders();
+            if(tabId === 'pos') fetchPendingOrders();
+        }
+
+        // --- MANAJEMEN PESANAN ---
+        async function loadOrders() {
+            const res = await fetch('/api/internal/transaksi', { headers: apiHeaders });
+            const orders = await res.json();
+            const tbody = document.getElementById('orderTable');
+            tbody.innerHTML = '';
+            const allStatuses = ['Pending', 'Dikemas', 'Dikirim', 'Selesai', 'Dibatalkan'];
+
+            orders.forEach(order => {
+                const statusOptions = allStatuses.map(status =>
+                    `<option value="${status}" ${order.status_transaksi === status ? 'selected' : ''}>${status}</option>`
+                ).join('');
+
+                tbody.innerHTML += `
+                    <tr id="order-row-${order.transaksi_id}">
+                        <td class="p-3 font-mono text-sm">${order.transaksi_id}</td>
+                        <td class="p-3">${order.pelanggan_id || 'Walk-in'}</td>
+                        <td class="p-3">${new Date(order.tanggal_transaksi).toLocaleString('id-ID')}</td>
+                        <td class="p-3">Rp ${parseInt(order.total_harga).toLocaleString('id-ID')}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                ${order.status_transaksi}
+                            </span>
+                        </td>
+                        <td class="p-3 flex items-center gap-2">
+                            <select id="status-select-${order.transaksi_id}" class="p-2 border rounded text-sm">
+                                ${statusOptions}
+                            </select>
+                            <button onclick="handleUpdateOrderStatus('${order.transaksi_id}')" class="bg-green-600 text-white px-3 py-2 rounded text-sm">Update</button>
+                            <button onclick="showOrderDetail('${order.transaksi_id}')" class="bg-blue-500 text-white px-3 py-2 rounded text-sm">Detail</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+        
+        function closeOrderDetailModal() {
+            document.getElementById('orderDetailModal').classList.add('hidden');
+        }
+
+        async function showOrderDetail(transaction_id) {
+            const modal = document.getElementById('orderDetailModal');
+            const loadingDiv = document.getElementById('modal-loading');
+            const dataDiv = document.getElementById('modal-data');
+            const itemList = document.getElementById('modalItemList');
+
+            modal.classList.remove('hidden');
+            loadingDiv.style.display = 'block';
+            dataDiv.style.display = 'none';
+            itemList.innerHTML = '';
+
+            try {
+                const res = await fetch(`/api/transaksi/${transaction_id}/detail`, { headers: apiHeaders });
+                if (!res.ok) {
+                    throw new Error('Gagal memuat detail item pesanan.');
+                }
+                const items = await res.json();
+
+                if (items && items.length > 0) {
+                    items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.innerText = `${item.jumlah_barang}x ${item.nama_barang}`;
+                        itemList.appendChild(li);
+                    });
+                } else {
+                    itemList.innerHTML = '<li>Tidak ada item dalam transaksi ini.</li>';
+                }
+
+                loadingDiv.style.display = 'none';
+                dataDiv.style.display = 'block';
+
+            } catch (err) {
+                loadingDiv.innerHTML = `<p class="text-red-500">${err.message}</p>`;
+            }
+        }
+
+        async function handleUpdateOrderStatus(transaction_id) {
+            const select = document.getElementById(`status-select-${transaction_id}`);
+            const new_status = select.value;
+            
+            try {
+                const res = await fetch(`/api/internal/transaksi/${transaction_id}/status`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ status_baru: new_status })
+                });
+
+                const result = await res.json();
+                if (!res.ok) {
+                    throw new Error(result.message || 'Gagal mengupdate status.');
+                }
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: result.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadOrders(); // Refresh table
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: err.message
+                });
+            }
         }
 
         // --- MANAJEMEN BARANG ---
@@ -246,6 +413,7 @@
             isEditProduct = false;
             document.getElementById('productForm').reset();
             document.getElementById('p_id').value = '';
+            document.getElementById('p_id').disabled = false;
             document.getElementById('pModalTitle').innerText = 'Tambah Barang';
             document.getElementById('productModal').classList.remove('hidden');
         }
@@ -299,9 +467,21 @@
         };
 
         async function deleteProduct(id) {
-            if(confirm('Hapus barang ini?')) {
+            const result = await Swal.fire({
+                title: 'Anda yakin?',
+                text: "Barang ini akan dihapus secara permanen!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
                 await fetch(`/api/internal/barang/${id}`, { method: 'DELETE', headers: apiHeaders });
                 loadProducts();
+                Swal.fire('Dihapus!', 'Barang telah dihapus.', 'success');
             }
         }
 
@@ -369,15 +549,28 @@
         };
 
         async function deleteCustomer(id) {
-            if(confirm('Hapus pelanggan ini?')) {
+             const result = await Swal.fire({
+                title: 'Anda yakin?',
+                text: "Pelanggan ini akan dihapus!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
                 await fetch(`/api/internal/pelanggan/${id}`, { method: 'DELETE', headers: apiHeaders });
                 loadCustomers();
+                 Swal.fire('Dihapus!', 'Pelanggan telah dihapus.', 'success');
             }
         }
 
         function closeModals() {
             document.getElementById('productModal').classList.add('hidden');
             document.getElementById('customerModal').classList.add('hidden');
+            closeOrderDetailModal();
         }
 
         // --- DASHBOARD ADMIN ---
@@ -562,10 +755,14 @@
         }
 
         // Start polling for pending orders
-        setInterval(fetchPendingOrders, 5000);
-        fetchPendingOrders();
+        if (document.getElementById('tab-pos')) {
+            setInterval(fetchPendingOrders, 5000);
+        }
 
         showTab('pos'); // Default tab to POS
     </script>
+</body>
+</html>
+ipt>
 </body>
 </html>

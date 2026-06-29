@@ -18,7 +18,7 @@ const snap = new midtransClient.Snap({
 // Konfigurasi Database Postgres
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3310,
+  port: process.env.DB_PORT || 3311,
   database: process.env.DB_NAME || 'testdb',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || ''
@@ -179,14 +179,107 @@ app.delete('/api/internal/pelanggan/:id', authenticateToken, authorizeRole('admi
     }
 });
 
-// Update Tracking Status (Admin & Kasir)
-app.put('/api/internal/transaksi/:id/status', authenticateToken, authorizeRole('admin', 'kasir'), async (req, res) => {
-    const { status_transaksi } = req.body;
+app.get('/api/internal/transaksi', authenticateToken, authorizeRole('admin', 'kasir'), async (req, res) => {
     try {
-        await pool.query("UPDATE transaksi SET status_transaksi = $1 WHERE transaksi_id = $2", [status_transaksi, req.params.id]);
-        res.json({ success: true, message: 'Status transaksi diperbarui' });
+        const results = await pool.query(`
+            SELECT 
+                transaksi_id, 
+                pelanggan_id, 
+                tanggal_transaksi, 
+                total_harga, 
+                status_transaksi 
+            FROM transaksi
+            ORDER BY tanggal_transaksi DESC
+        `);
+        res.json(results.rows);
     } catch (err) {
+        console.error('Error fetching internal transactions:', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/transaksi/:id/detail', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const query = `
+            SELECT 
+                b.nama_barang, 
+                dt.jumlah_barang
+            FROM detail_transaksi dt
+            JOIN barang b ON dt.barang_id = b.barang_id
+            WHERE dt.transaksi_id = $1
+        `;
+        const result = await pool.query(query, [id]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching transaction details:', err);
+        res.status(500).json({ error: 'Gagal memuat detail item pesanan.' });
+    }
+});
+
+app.patch('/api/internal/transaksi/:id/status', authenticateToken, authorizeRole('admin', 'kasir'), async (req, res) => {
+    const { id } = req.params;
+    const { status_baru } = req.body;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // Concurrency Protection: Fetch and lock the transaction row
+        const trxRes = await client.query(
+            "SELECT status_transaksi FROM transaksi WHERE transaksi_id = $1 FOR UPDATE",
+            [id]
+        );
+
+        if (trxRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan.' });
+        }
+        const oldStatus = trxRes.rows[0].status_transaksi;
+
+        // Idempotent Stock Deduction: Only deduct if moving TO 'Selesai' from a different status
+        if (status_baru === 'Selesai' && oldStatus !== 'Selesai') {
+            const detailRes = await client.query(
+                "SELECT barang_id, jumlah_barang FROM detail_transaksi WHERE transaksi_id = $1",
+                [id]
+            );
+            for (const item of detailRes.rows) {
+                await client.query(
+                    "UPDATE barang SET stok = stok - $1 WHERE barang_id = $2",
+                    [item.jumlah_barang, item.barang_id]
+                );
+            }
+        }
+
+        // Stock Rollback: Only add back if moving FROM 'Selesai' TO 'Dibatalkan'
+        if (status_baru === 'Dibatalkan' && oldStatus === 'Selesai') {
+            const detailRes = await client.query(
+                "SELECT barang_id, jumlah_barang FROM detail_transaksi WHERE transaksi_id = $1",
+                [id]
+            );
+            for (const item of detailRes.rows) {
+                await client.query(
+                    "UPDATE barang SET stok = stok + $1 WHERE barang_id = $2",
+                    [item.jumlah_barang, item.barang_id]
+                );
+            }
+        }
+        
+        // Finally, update the status
+        await client.query(
+            "UPDATE transaksi SET status_transaksi = $1 WHERE transaksi_id = $2",
+            [status_baru, id]
+        );
+        
+        await client.query('COMMIT');
+        res.json({ success: true, message: `Status updated to ${status_baru} and stock adjusted if necessary.` });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Update order status error:", err);
+        res.status(500).json({ success: false, error: err.message });
+    } finally {
+        client.release();
     }
 });
 

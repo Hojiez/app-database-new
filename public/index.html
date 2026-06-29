@@ -206,18 +206,23 @@
             if (keranjang.length === 0) {
                 list.innerHTML = '<p class="text-gray-500 italic">Keranjang masih kosong.</p>';
             } else {
-                keranjang.forEach((item, i) => {
+                keranjang.forEach(item => {
                     const sub = item.harga * item.jumlah;
                     total += sub;
                     list.innerHTML += `
                         <div class="flex justify-between items-center border-b border-gray-700 pb-3 mt-2">
-                            <div>
-                                <div class="font-bold text-gray-200">${item.nama_barang}</div>
-                                <div class="text-sm text-gray-400">${item.jumlah} x Rp ${item.harga.toLocaleString()}</div>
+                            <div class="w-2/5">
+                                <div class="font-bold text-gray-200 truncate">${item.nama_barang}</div>
+                                <div class="text-sm text-gray-400">Rp ${item.harga.toLocaleString()}</div>
                             </div>
-                            <div class="text-right">
+                            <div class="flex items-center gap-3">
+                                <button onclick="updateQuantity(${item.id_barang}, -1)" class="flex items-center justify-center w-6 h-6 bg-gray-700 rounded-full font-bold text-lg hover:bg-gray-600 transition">-</button>
+                                <span class="font-bold text-lg">${item.jumlah}</span>
+                                <button onclick="updateQuantity(${item.id_barang}, 1)" class="flex items-center justify-center w-6 h-6 bg-gray-700 rounded-full font-bold text-lg hover:bg-gray-600 transition">+</button>
+                            </div>
+                            <div class="text-right w-1/4">
                                 <div class="font-bold text-yellow-500">Rp ${sub.toLocaleString()}</div>
-                                <button onclick="hapusItemKeranjang(${i})" class="text-red-400 text-xs hover:text-red-300 uppercase tracking-wider font-bold mt-1">Hapus</button>
+                                <button onclick="removeFromCart(${item.id_barang})" class="text-red-400 text-xs hover:text-red-300 uppercase tracking-wider font-bold mt-1">Hapus</button>
                             </div>
                         </div>
                     `;
@@ -228,10 +233,35 @@
             document.getElementById('cartModal').classList.remove('hidden');
         }
 
-        function hapusItemKeranjang(index) {
-            keranjang.splice(index, 1);
+        function updateQuantity(itemId, change) {
+            const itemIndex = keranjang.findIndex(k => k.id_barang === itemId);
+
+            if (itemIndex > -1) {
+                keranjang[itemIndex].jumlah += change;
+
+                if (keranjang[itemIndex].jumlah <= 0) {
+                    // If quantity is zero or less, remove the item
+                    keranjang.splice(itemIndex, 1);
+                }
+            }
+            
             saveCart();
-            bukaKeranjang();
+            bukaKeranjang(); // Re-render the cart to show changes instantly
+        }
+
+        function removeFromCart(itemId) {
+            keranjang = keranjang.filter(k => k.id_barang !== itemId);
+            saveCart();
+            bukaKeranjang(); // Re-render
+        }
+
+        function hapusItemKeranjang(index) {
+            // This function is deprecated but kept for safety in case it's called elsewhere.
+            // It's better to remove by ID.
+            const item = keranjang[index];
+            if (item) {
+                removeFromCart(item.id_barang);
+            }
         }
 
         function tutupKeranjang() {
